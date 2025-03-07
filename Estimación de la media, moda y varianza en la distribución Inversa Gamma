@@ -1,0 +1,106 @@
+# install.packages("nimble")
+
+library(nimble) 
+
+# -------------------------------------------
+# Función log-verosimilitud Inversa Gamma ---
+# -------------------------------------------
+
+loglik <- function(p,t){
+  -sum(dinvgamma(t,shape=p[1],scale=p[2],log=TRUE))
+}
+
+# -----------------------------------------------------
+# Función necesarias para estimar la media, la moda ---
+# y la varianza de la distribución Inversa Gamma ------
+# -----------------------------------------------------
+
+estMean <- function(a,b){
+  b/(a-1)
+}
+
+estMode <- function(a,b){
+  b/(a-1)
+}
+
+estVari <- function(a,b){
+  b/(a-1)
+}
+
+# -----------------------------------------------------------------------
+# Función necesarias para calcular la varianza de los estimadores de  ---
+# la media, la moda y de la varianza de una población Inversa Gamma -----
+# -----------------------------------------------------------------------
+
+varMean <- function(a,b,cov){
+  ga = -b/(a-1)^2
+  gb = 1/(a-1)
+    diag(t(c(ga,gb))%*%cov%*%c(ga,gb))
+}
+
+varMode <- function(a,b,cov){
+  ga = -b/(a-1)^2
+  gb = 1/(a-1)
+    diag(t(c(ga,gb))%*%cov%*%c(ga,gb))
+}
+
+# ---------------------------------------------
+# Estimación de los parámetros alpha y beta ---
+# ---------------------------------------------
+
+t <- c(10.05, 8.08, 9.05, 8.15, 8.08, 8.02, 8.50, 8.22, 9.12, 8.02, 8.13, 10.10, 10.77, 9.02, 9.43, 8.08, 8.35, 8.17, 8.37, 11.20, 8.95, 8.42, 9.20, 8.15, 8.07, 9.02, 8.52, 10.32, 9.80, 9.93, 9.53, 9.95, 9.15, 6.85, 9.10, 10.73, 9.87, 9.05, 10.20, 9.35, 10.73,  8.02, 12.37, 10.53, 9.02, 10.07, 9.12, 8.97, 9.58, 8.92, 10.67, 10.30, 9.07, 9.98, 10.22, 9.55, 9.97, 12.23, 10.18)
+
+fit <- optim(par = c(77,171), fn = loglik, method = c("L-BFGS-B"),lower=c(1e-12,1e-12),upper=c(Inf,Inf), hessian = TRUE, t = t)
+fit$par# 77.86597 717.27780
+fit$value# 86.75913
+fit$convergence# 0
+sqrt(diag(solve(fit$hessian)))# 14.3030 132.1789
+
+# -------------------------------------
+# Estimación intervalar de la media ---
+# -------------------------------------
+
+estMean(fit$par[1],fit$par[2])# 9.331539
+varMean(fit$par[1],fit$par[2],solve(fit$hessian))# 0.01945167
+
+9.331539-2.576*sqrt(0.01945167)# 8.972266 (Confianza del 99%)
+9.331539+2.576*sqrt(0.01945167)# 9.690812
+
+9.331539-1.960*sqrt(0.01945167)# 9.058179 (Confianza del 95%)
+9.331539+1.960*sqrt(0.01945167)# 9.604899
+
+9.331539-1.645*sqrt(0.01945167)# 9.102112 (Confianza del 90%)
+9.331539+1.645*sqrt(0.01945167)# 9.560966
+
+# -------------------------------------
+# Estimación intervalar de la moda ---
+# -------------------------------------
+
+estMode(fit$par[1],fit$par[2])# 9.094896
+varMode(fit$par[1],fit$par[2],solve(fit$hessian))# 0.01845362
+
+9.094896-2.576*sqrt(0.01845362)# 8.744962 (Confianza del 99%)
+9.094896+2.576*sqrt(0.01845362)# 9.44483
+
+9.094896-1.960*sqrt(0.01845362)# 8.828642 (Confianza del 95%)
+9.094896+1.960*sqrt(0.01845362)# 9.36115
+
+9.094896-1.645*sqrt(0.01845362)# 8.871432 (Confianza del 90%)
+9.094896+1.645*sqrt(0.01845362)# 9.31836
+
+# ----------------------------------------
+# Estimación intervalar de la Varianza ---
+# ----------------------------------------
+
+estVari(fit$par[1],fit$par[2])# 1.147782
+varVari(fit$par[1],fit$par[2],solve(fit$hessian))# 0.1777417
+
+1.147782-2.576*sqrt(0.1777417)# 0.06175525 (Confianza del 99%)
+1.147782+2.576*sqrt(0.1777417)# 2.233809
+
+1.147782-1.960*sqrt(0.1777417)# 0.3214573 (Confianza del 95%)
+1.147782+1.960*sqrt(0.1777417)# 1.974107
+
+1.147782-1.645*sqrt(0.1777417)# 0.4542595 (Confianza del 90%)
+1.147782+1.645*sqrt(0.1777417)# 1.841305
+
