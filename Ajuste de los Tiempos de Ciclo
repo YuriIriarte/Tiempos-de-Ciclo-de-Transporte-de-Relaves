@@ -1,0 +1,76 @@
+# install.packages("univariateML") # Para cálcular los valores AIC y BIC
+# install.packages("fitdistrplus") # Para obtenner las estimativas de máxima verosimilitud
+# install.packages("nimble")       # Para computar la distribución Inversa Gamma
+
+library(univariateML) ; library(fitdistrplus) ;  library(nimble) 
+
+t <- c(10.05, 8.08, 9.05, 8.15, 8.08, 8.02, 8.50, 8.22, 9.12, 8.02, 8.13, 10.10, 10.77, 9.02, 9.43, 8.08, 8.35, 8.17, 8.37, 11.20, 8.95, 8.42, 9.20, 8.15, 8.07, 9.02, 8.52, 10.32, 9.80, 9.93, 9.53, 9.95, 9.15, 6.85, 9.10, 10.73, 9.87, 9.05, 10.20, 9.35, 10.73,  8.02, 12.37, 10.53, 9.02, 10.07, 9.12, 8.97, 9.58, 8.92, 10.67, 10.30, 9.07, 9.98, 10.22, 9.55, 9.97, 12.23, 10.18)
+
+# --------------------------------------------------------
+# Valores AIC y BIC obtenidos vía máxima verosimilitud ---
+# --------------------------------------------------------
+
+aic <- AIC(mlinvgamma(t),
+           mlgamma(t),
+           mllnorm(t),
+           mlinvgauss(t),
+           mlweibull(t),
+           mlinvweibull(t),
+           mlgumbel(t))
+
+aic
+#                 df      AIC
+# mlinvgamma(t)    2 177.5183
+# mlgamma(t)       2 178.1798
+# mllnorm(t)       2 177.7216
+# mlinvgauss(t)    2 177.7211
+# mlweibull(t)     2 189.6588
+# mlinvweibull(t)  2 184.8414
+# mlgumbel(t)      2 180.0826
+
+bic <- BIC(mlinvgamma(t),
+           mlgamma(t),
+           mllnorm(t),
+           mlinvgauss(t),
+           mlweibull(t),
+           mlinvweibull(t),
+           mlgumbel(t))
+
+bic
+#                 df      BIC
+# mlinvgamma(t)    2 181.6733
+# mlgamma(t)       2 182.3348
+# mllnorm(t)       2 181.8767
+# mlinvgauss(t)    2 181.8761
+# mlweibull(t)     2 193.8139
+# mlinvweibull(t)  2 188.9964
+# mlgumbel(t)      2 184.2377
+
+# --------------------------------------------------------
+# Ajuste de los tiempos de ciclo de transporte con las ---
+# distribuciones Inversa Gamma y Weibull -----------------
+# --------------------------------------------------------
+
+fit1 <- fitdist(t, distr="invgamma")
+
+summary(fit1)
+#        estimate Std. Error
+# shape  77.87679   14.30736
+# scale 717.38013  132.22002
+# Loglikelihood:  -86.75913   AIC:  177.5183   BIC:  181.6733 
+# Correlation matrix:
+#           shape     scale
+# shape 1.0000000 0.9967914
+# scale 0.9967914 1.0000000
+
+fit2 <- fitdist(t, distr="weibull")
+
+summary(fit2)
+#       estimate Std. Error
+# shape 8.566825  0.7870394
+# scale 9.821882  0.1584854
+# Loglikelihood:  -92.82942   AIC:  189.6588   BIC:  193.8139 
+# Correlation matrix:
+#           shape     scale
+# shape 1.0000000 0.3362169
+# scale 0.3362169 1.0000000
