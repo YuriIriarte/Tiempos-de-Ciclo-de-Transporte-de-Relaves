@@ -3,7 +3,9 @@
 # -----------------------
 
 library(nimble)   # Para el computo de la distribución Gama Inversa
+
 library(boot)     # Requerido para el método boostrap
+
 library(numDeriv) # Requerido para el método delta
 
 # ------------------------------------------
