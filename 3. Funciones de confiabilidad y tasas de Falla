@@ -1,0 +1,82 @@
+# -----------------------
+# Paquetes requeridos ---
+# -----------------------
+
+library(survival) # Para computo de la función de confiabilidad empírica
+
+library(nimble)   # Para el computo de la distribución Gama Inversa 
+
+library(ggplot2)  # Para elaborar figuras
+
+# --------------------------------------------
+# Tiempos de ciclo de carguío y transporte ---
+# --------------------------------------------
+
+t <- c(10.05, 8.08, 9.05, 8.15, 8.08, 8.02, 8.50, 8.22, 9.12, 8.02, 8.13, 10.10, 10.77, 9.02, 9.43, 8.08, 8.35, 8.17, 8.37, 11.20, 8.95, 8.42, 9.20, 8.15, 8.07, 9.02, 8.52, 10.32, 9.80, 9.93, 9.53, 9.95, 9.15, 6.85, 9.10, 10.73, 9.87, 9.05, 10.20, 9.35, 10.73,  8.02, 12.37, 10.53, 9.02, 10.07, 9.12, 8.97, 9.58, 8.92, 10.67, 10.30, 9.07, 9.98, 10.22, 9.55, 9.97, 12.23, 10.18)
+
+# ------------------------------
+# Funciones de confiabilidad ---
+# ------------------------------
+
+km_fit <- survfit(Surv(t) ~ 1)
+
+km_data <- data.frame(time = km_fit$time, survival = km_fit$surv)
+
+ggplot(km_data, aes(x = time, y = survival, color = "Empírica")) +
+  geom_step(size = 1) +
+  stat_function(fun = function(x) 1 - pinvgamma(x, shape = 77.86597, scale = 717.27780),
+               aes(color = "Inversa Gamma"), size = 1, xlim = c(6.5, 15), linetype = 2) +
+  stat_function(fun = function(x) 1 - pweibull(x, shape = 8.565985, scale = 9.821862),
+               aes(color = "Weibull"), size = 1, xlim = c(6.5, 15), linetype = 3) +
+  labs(x = "Tiempos en minutos", y = "Función de confiabilidad", color = "Distribución") +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 15),
+    axis.text = element_text(size = 12),
+    panel.border = element_rect(color = "black", fill = NA, size = 1),
+    legend.position = c(0.76, 0.82),  
+    legend.background = element_rect(fill = alpha("white", 0.5))  
+  ) +
+  scale_color_manual(values = c("Empírica" = "black", "Inversa Gamma" = "red", "Weibull" = "blue")) +
+  guides(color = guide_legend(keywidth = 2.5))
+
+# ------------------------------
+# Funciones de tasa de falla ---
+# ------------------------------
+
+shape_ig <- 77.86597
+scale_ig <- 717.27780
+
+shape_w <- 8.565985
+scale_w <- 9.821862
+
+t_vals <- seq(5, 15, length.out = 200)
+
+hazard_ig <- dinvgamma(t_vals, shape = shape_ig, scale = scale_ig) / 
+             (1 - pinvgamma(t_vals, shape = shape_ig, scale = scale_ig))
+
+hazard_w <- dweibull(t_vals, shape = shape_w, scale = scale_w) / 
+            (1 - pweibull(t_vals, shape = shape_w, scale = scale_w))
+
+data_hazard <- data.frame(
+  t = rep(t_vals, 2),
+  hazard = c(hazard_ig, hazard_w),
+  distribution = rep(c("Inversa Gamma", "Weibull"), each = length(t_vals))
+)
+
+ggplot(data_hazard, aes(x = t, y = hazard, color = distribution, linetype = distribution)) +
+ geom_line(size = 1) +
+ labs(x = "Tiempos en minutos", y = "Función de tasa de falla", color = "Distribución", linetype = "Distribución") +
+ ylim(0, 3) +  # Ajustar los límites del eje vertical
+ theme_minimal() +
+ theme(
+   axis.title = element_text(size = 15),
+   axis.text = element_text(size = 12),
+   panel.border = element_rect(color = "black", fill = NA, size = 1),
+   legend.position = c(0.76, 0.2),  
+   legend.background = element_rect(fill = alpha("white", 0.5))  
+ ) +
+ scale_color_manual(values = c("Inversa Gamma" = "red", "Weibull" = "blue")) +
+ scale_linetype_manual(values = c("Inversa Gamma" = "solid", "Weibull" = "dashed")) + # Línea discontinua para Weibull
+ guides(color = guide_legend(keywidth = 2.5), linetype = guide_legend(keywidth = 2.5))
+
