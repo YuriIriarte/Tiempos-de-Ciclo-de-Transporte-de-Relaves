@@ -12,6 +12,8 @@ library(DescTools)    # Para el computo de la prueba de normalidad Shapiro-Franc
 
 library(ggplot2)      # Para elaborar figuras
 
+library(goftest)      # Para el computo de pruebas de bondad de ajuste
+
 # --------------------------------------------
 # Tiempos de ciclo de carguío y transporte ---
 # --------------------------------------------
@@ -129,6 +131,20 @@ theme(
 ) +
 scale_color_manual(values = c("Inversa Gamma" = "red", "Weibull" = "blue")) +
 guides(color = guide_legend(keywidth = 2.5)) 
+
+# -------------------------------
+# Pruebas de bondad de ajuste ---
+# -------------------------------
+
+a <- 77.86597 
+b <- 717.27780
+ad.test(t, "pinvgamma", shape=a, scale=b) # An = 0.62425, p-value = 0.6247
+cvm.test(t, "pinvgamma", shape=a, scale=b)# omega2 = 0.086661, p-value = 0.656
+
+a <- 8.565985 
+b <- 9.821862
+ad.test(t, "pweibull", shape=a, scale=b)# An = 1.3106, p-value = 0.2289
+cvm.test(t, "pweibull", shape=a, scale=b)# D = 0.16948, p-value = 0.336
 
 # -------------
 # Q-Q plots ---
