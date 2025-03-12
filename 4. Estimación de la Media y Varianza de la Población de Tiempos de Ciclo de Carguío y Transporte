@@ -1,0 +1,108 @@
+# -----------------------
+# Paquetes requeridos ---
+# -----------------------
+
+library(nimble)   # Para el computo de la distribución Gama Inversa
+library(boot)     # Requerido para el método boostrap
+library(numDeriv) # Requerido para el método delta
+
+# ------------------------------------------
+# Función log-verosimilitud Gama Inversa ---
+# ------------------------------------------
+
+loglik <- function(p,t){
+  -sum(dinvgamma(t,shape=p[1],scale=p[2],log=TRUE))
+}
+
+# ---------------------------------
+# Estimación de parámetros (MV) ---
+# ---------------------------------
+ 
+t <- c(10.05, 8.08, 9.05, 8.15, 8.08, 8.02, 8.50, 8.22, 9.12, 8.02, 8.13, 10.10, 10.77, 
+       9.02, 9.43, 8.08, 8.35, 8.17, 8.37, 11.20, 8.95, 8.42, 9.20, 8.15, 8.07, 9.02, 
+       8.52, 10.32, 9.80, 9.93, 9.53, 9.95, 9.15, 6.85, 9.10, 10.73, 9.87, 9.05, 10.20, 
+       9.35, 10.73, 8.02, 12.37, 10.53, 9.02, 10.07, 9.12, 8.97, 9.58, 8.92, 10.67, 
+       10.30, 9.07, 9.98, 10.22, 9.55, 9.97, 12.23, 10.18)
+
+fit <- optim(par = c(77,171), fn = loglik, method = "L-BFGS-B",
+              lower = c(1e-12, 1e-12), upper = c(Inf, Inf), hessian = TRUE, t = t)
+
+alpha_hat <- fit$par[1] # 77.86597
+beta_hat <- fit$par[2]  # 717.2778
+
+# ------------------------------------------------
+# Estimación puntual de la Media y la Varianza ---
+# ------------------------------------------------
+
+inv_gamma_stats <- function(alpha, beta) {
+  mean_ig <- if (alpha > 1) beta / (alpha - 1) else NA  
+  var_ig <- if (alpha > 2) (beta^2) / ((alpha - 1)^2 * (alpha - 2)) else NA  
+  return(c(mean_ig, var_ig))
+}
+
+stats_est <- inv_gamma_stats(alpha_hat, beta_hat)
+round(stats_est[1], 3) # 9.332
+round(stats_est[2], 3) # 1.148
+# -------------------------------------------------
+# Método Delta para los Intervalos de Confianza ---
+# -------------------------------------------------
+
+J <- jacobian(function(p) inv_gamma_stats(p[1], p[2]), c(alpha_hat, beta_hat))
+cov_matrix <- solve(fit$hessian)
+var_est <- J %*% cov_matrix %*% t(J)  
+
+# Intervalos de confianza al 90% ---
+alpha <- 0.1
+IC_delta <- cbind(stats_est - qnorm(1 - alpha / 2) * sqrt(diag(var_est)), 
+                  stats_est + qnorm(1 - alpha / 2) * sqrt(diag(var_est)))
+
+round(c(IC_delta[1,1],IC_delta[1,2]),3) # 9.102 9.561
+round(c(IC_delta[2,1],IC_delta[2,2]),3) # 0.779 1.517
+ 
+# Intervalos de confianza al 95% ---
+alpha <- 0.05
+IC_delta <- cbind(stats_est - qnorm(1 - alpha / 2) * sqrt(diag(var_est)), 
+                  stats_est + qnorm(1 - alpha / 2) * sqrt(diag(var_est)))
+
+round(c(IC_delta[1,1],IC_delta[1,2]),3) # 9.058 9.605
+round(c(IC_delta[2,1],IC_delta[2,2]),3) # 0.708 1.588
+ 
+# Intervalos de confianza al 99% ---
+alpha <- 0.01
+IC_delta <- cbind(stats_est - qnorm(1 - alpha / 2) * sqrt(diag(var_est)), 
+                  stats_est + qnorm(1 - alpha / 2) * sqrt(diag(var_est)))
+
+round(c(IC_delta[1,1],IC_delta[1,2]),3) # 8.972 9.691
+round(c(IC_delta[2,1],IC_delta[2,2]),3) # 0.570 1.726
+
+# ----------------------------------------------
+# Bootstrap para los intervalos de confianza ---
+# ----------------------------------------------
+
+bootstrap_fn <- function(data, indices) {
+  sample_data <- data[indices]  # Toma una muestra bootstrap
+  fit_boot <- optim(par = c(alpha_hat, beta_hat), fn = loglik, method = "L-BFGS-B",
+                   lower = c(1e-12, 1e-12), upper = c(Inf, Inf), t = sample_data)
+  return(inv_gamma_stats(fit_boot$par[1], fit_boot$par[2]))  # Retorna estadísticas de interés
+} 
+ 
+B <- 1000  # Número de remuestreos
+boot_results <- boot(t, statistic = bootstrap_fn, R = B)
+
+# Extraer intervalos de confianza percentiles al 90%
+alpha <- 0.1
+IC_boot <- apply(boot_results$t, 2, function(x) quantile(x, probs = c(alpha/2, 1 - alpha/2)))
+round(c(IC_boot[1,1],IC_boot[2,1]),3) # 9.095 9.552
+round(c(IC_boot[1,2],IC_boot[2,2]),3) # 0.797 1.503
+
+# Extraer intervalos de confianza percentiles al 95%
+alpha <- 0.05
+IC_boot <- apply(boot_results$t, 2, function(x) quantile(x, probs = c(alpha/2, 1 - alpha/2)))
+round(c(IC_boot[1,1],IC_boot[2,1]),3) # 9.067 9.602
+round(c(IC_boot[1,2],IC_boot[2,2]),3) # 0.759 1.569
+
+# Extraer intervalos de confianza percentiles al 99%
+alpha <- 0.01
+IC_boot <- apply(boot_results$t, 2, function(x) quantile(x, probs = c(alpha/2, 1 - alpha/2)))
+round(c(IC_boot[1,1],IC_boot[2,1]),3) # 8.961 9.664
+round(c(IC_boot[1,2],IC_boot[2,2]),3) # 0.687 1.730
