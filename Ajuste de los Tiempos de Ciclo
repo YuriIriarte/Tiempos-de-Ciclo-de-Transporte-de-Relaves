@@ -1,13 +1,45 @@
-# install.packages("univariateML") # Para cálcular los valores AIC y BIC
-# install.packages("fitdistrplus") # Para obtenner las estimativas de máxima verosimilitud
-# install.packages("nimble")       # Para computar la distribución Inversa Gamma
+# -----------------------
+# Paquetes requeridos ---
+# -----------------------
 
-library(univariateML) ; library(fitdistrplus) ;  library(nimble) 
+library(univariateML) # Para cálcular los valores AIC y BIC
+
+library(fitdistrplus) # Para obtenner las estimativas de máxima verosimilitud
+
+library(nimble)       # Para el computo de la distribución Gama Inversa 
+
+library(DescTools)    # Para el computo de la prueba de normalidad Shapiro-Francia
+
+library(ggplot2)      # Para elaborar figuras
+
+# --------------------------------------------
+# Tiempos de ciclo de carguío y transporte ---
+# --------------------------------------------
 
 t <- c(10.05, 8.08, 9.05, 8.15, 8.08, 8.02, 8.50, 8.22, 9.12, 8.02, 8.13, 10.10, 10.77, 9.02, 9.43, 8.08, 8.35, 8.17, 8.37, 11.20, 8.95, 8.42, 9.20, 8.15, 8.07, 9.02, 8.52, 10.32, 9.80, 9.93, 9.53, 9.95, 9.15, 6.85, 9.10, 10.73, 9.87, 9.05, 10.20, 9.35, 10.73,  8.02, 12.37, 10.53, 9.02, 10.07, 9.12, 8.97, 9.58, 8.92, 10.67, 10.30, 9.07, 9.98, 10.22, 9.55, 9.97, 12.23, 10.18)
 
+# ---------------------------------------------------
+# Pruebas de normalidad y gráfico Q-Q plot normal ---
+# ---------------------------------------------------
+
+shapiro.test(t)       # W = 0.95949, p-value = 0.04736
+ShapiroFranciaTest(t) # W = 0.95689, p-value = 0.03630
+
+ggplot(data.frame(t), aes(sample = t)) +
+  stat_qq(color = "red") +  
+  stat_qq_line() +  
+  labs(x = "Cuantiles teóricos", y = "Cuantiles muestrales") +
+theme_minimal() +
+theme(
+   axis.title = element_text(size = 15),
+   axis.text = element_text(size = 12),
+   panel.border = element_rect(color = "black", fill = NA, size = 1),
+   legend.position = c(0.86, 0.81),  
+   legend.background = element_rect(fill = alpha("white", 0.5))  
+)
+
 # --------------------------------------------------------
-# Valores AIC y BIC obtenidos vía máxima verosimilitud ---
+# Comparación de ajustes con base en valores AIC y BIC ---
 # --------------------------------------------------------
 
 aic <- AIC(mlinvgamma(t),
@@ -46,10 +78,9 @@ bic
 # mlinvweibull(t)  2 188.9964
 # mlgumbel(t)      2 184.2377
 
-# --------------------------------------------------------
-# Ajuste de los tiempos de ciclo de transporte con las ---
-# distribuciones Inversa Gamma y Weibull -----------------
-# --------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------
+# Ajuste de los tiempos de ciclo de transporte con las distribuciones Gama Inversa y Weibull -----------------
+# ------------------------------------------------------------------------------------------------------------
 
 fit1 <- fitdist(t, distr="invgamma")
 
@@ -74,3 +105,65 @@ summary(fit2)
 #           shape     scale
 # shape 1.0000000 0.3362169
 # scale 0.3362169 1.0000000
+
+# -------------------------------------------------------------------------------------------------------
+# Histograma de los tiempos de ciclo y carguío ajustado con las distribuciones Gama Inversa y Weibull ---
+# -------------------------------------------------------------------------------------------------------
+
+ggplot(data, aes(x = x)) +
+   geom_histogram(aes(y = ..density..), breaks = seq(5, 15, 1), 
+                fill = "lightblue", 
+                alpha = 0.5) +
+stat_function(fun = function(x) dinvgamma(x, shape=77.86597, scale=717.27780),
+               aes(color = "Inversa Gamma"), size = 1, xlim = c(5, 15), linetype = 2) +
+stat_function(fun = function(x) dweibull(x, shape = 8.565985, scale = 9.821862),
+               aes(color = "Weibull"), size = 1, xlim = c(5, 15), linetype = 3) +
+labs(x = "Tiempos en minutos", y = "Función de densidad", color = "Distribución") +
+theme_minimal() +
+theme(
+   axis.title = element_text(size = 15),
+   axis.text = element_text(size = 12),
+   panel.border = element_rect(color = "black", fill = NA, size = 1),
+   legend.position = c(0.76, 0.84),  
+   legend.background = element_rect(fill = alpha("white", 0.5))  
+) +
+scale_color_manual(values = c("Inversa Gamma" = "red", "Weibull" = "blue")) +
+guides(color = guide_legend(keywidth = 2.5)) 
+
+# -------------
+# Q-Q plots ---
+# -------------
+
+a <- 77.86597
+b <- 717.27780
+theoretical_quantiles_inv_gamma <- qinvgamma(ppoints(length(data$x)), shape = a, scale = b)
+
+a <- 8.565985
+b <- 9.821862
+theoretical_quantiles_weibull <- qweibull(ppoints(length(data$x)), shape = a, scale = b)
+
+qq_data <- data.frame(
+  theoretical_inv_gamma = theoretical_quantiles_inv_gamma,
+  theoretical_weibull = theoretical_quantiles_weibull,
+  sample = sort(data$x)
+)
+
+ggplot() +
+  geom_point(data = qq_data, aes(x = theoretical_inv_gamma, y = sample, color = "Gama Inversa")) +
+  geom_point(data = qq_data, aes(x = theoretical_weibull, y = sample, color = "Weibull")) +
+  geom_abline(slope = 1, intercept = 0, color = "black") + # Línea de referencia
+  labs(x = "Cuantiles teóricos",
+       y = "Cuantiles muestrales",
+       color = "Distribution") +
+  theme_minimal() +
+  theme(
+     axis.title = element_text(size = 15),
+     axis.text = element_text(size = 12),
+     panel.border = element_rect(color = "black", fill = NA, size = 1),
+     legend.position = c(0.25, 0.85),  
+     legend.background = element_rect(fill = alpha("white", 0.5))  
+  ) +
+  scale_color_manual(values = c("Gama Inversa" = "red", "Weibull" = "blue")) +
+  guides(color = guide_legend(keywidth = 2.5)) 
+
+
