@@ -1,0 +1,94 @@
+# -----------------------
+# Paquetes utilizados ---
+# -----------------------
+
+library(moments) # Para el computo de los coeficientes de asimetría y curtosis de Fisher
+ 
+library(ggplot2) # Para elaborar gráficos 
+
+library(modeest) # Para elaborar gráficos
+
+library(modeest) # Para estimar el valor modal
+
+# --------------------------------------------
+# Tiempos de ciclo de carguío y transporte ---
+# --------------------------------------------
+
+t <- c(10.05, 8.08, 9.05, 8.15, 8.08, 8.02, 8.50, 8.22, 9.12, 8.02, 8.13, 10.10, 10.77, 9.02, 9.43, 8.08, 8.35, 8.17, 8.37, 11.20, 8.95, 8.42, 9.20, 8.15, 8.07, 9.02, 8.52, 10.32, 9.80, 9.93, 9.53, 9.95, 9.15, 6.85, 9.10, 10.73, 9.87, 9.05, 10.20, 9.35, 10.73,  8.02, 12.37, 10.53, 9.02, 10.07, 9.12, 8.97, 9.58, 8.92, 10.67, 10.30, 9.07, 9.98, 10.22, 9.55, 9.97, 12.23, 10.18)
+
+summary(t)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#  6.850   8.395   9.120   9.332  10.060  12.370
+
+sd(t) # 1.083
+quantile(t,0.25) # 8.395
+quantile(t,0.75) # 10.060
+skewness(t) # 0.4777331
+kurtosis(t) # 3.311041
+
+mlv(t, method = "meanshift")# 9.108925
+
+# --------------------------------------------------------------
+# Histograma de los tiempos de ciclo de carguío y transporte ---
+# --------------------------------------------------------------
+
+data <- data.frame(x=t)
+
+ggplot(data, aes(x=x)) +
+geom_histogram(aes(y = ..count..), breaks = seq(6, 13, 1), fill = "lightblue", alpha = 0.5) +
+  labs(x = "Tiempo en minutos", y = "Frecuencia absoluta") +
+theme_minimal() +
+theme(
+   axis.title = element_text(size = 15),
+   axis.text = element_text(size = 12),
+   panel.border = element_rect(color = "black", fill = NA, size = 1),
+   legend.position = c(0.86, 0.81),  
+   legend.background = element_rect(fill = alpha("white", 0.5))  
+)
+
+# -------------------------------------------------------------------------------------
+# Distribución acumulada empírica para los tiempos de ciclo de carguío y transporte ---
+# -------------------------------------------------------------------------------------
+
+n_clases <- 7
+histograma <- hist(t, breaks = n_clases, plot = FALSE)
+frecuencia_relativa <- histograma$counts / sum(histograma$counts)
+frecuencia_acumulada <- cumsum(frecuencia_relativa)
+
+data <- data.frame(
+  mid = histograma$mids,
+  frecuencia_acumulada = frecuencia_acumulada
+)
+
+ggplot(data, aes(x = mid, y = frecuencia_acumulada)) +
+  geom_point(color = "lightblue", size = 2.5) +
+  geom_line(linetype = "dotted", color = "lightblue") +
+  labs(x = "Tiempo en minutos", y = "Frecuencia relativa acumulada") +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 15),
+    axis.text = element_text(size = 12),
+    panel.border = element_rect(color = "black", fill = NA, size = 1),
+    legend.position = c(0.86, 0.81),
+    legend.background = element_rect(fill = alpha("white", 0.5))
+  )
+
+# ------------------------------------------------------------
+# Box-plot de los tiempos de ciclo de carguío y transporte ---
+# ------------------------------------------------------------
+
+set.seed(3)
+
+ggplot(data.frame(t), aes(x = t, y = 1)) +  
+  geom_boxplot(fill = "lightblue", color = "black", width = 0.5, alpha = 0.5) + 
+  geom_jitter(aes(x = t, y = 1), color = "red", width = 0.05, size = 2) + 
+  labs(x = "Tiempo en minutos", y = "") +
+  theme_minimal() +
+  theme(axis.title.y = element_blank(),  
+        axis.text.y = element_blank(),  
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size = 12),
+        panel.border = element_rect(color = "black", fill = NA, size = 1)
+   ) 
+
